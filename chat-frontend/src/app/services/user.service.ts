@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { debounceTime, distinctUntilChanged, switchMap, catchError } from 'rxjs/operators';
 import { User } from '../models';
 import { environment } from '../../environments/environment';
 
@@ -16,5 +17,16 @@ export class UserService {
 
   getUser(id: string): Observable<User> {
     return this.http.get<User>(`${environment.apiUrl}/users/${id}`);
+  }
+
+  searchUsers(query: string): Observable<User[]> {
+    if (!query || query.trim().length === 0) {
+      return of([]);
+    }
+    return this.http.get<User[]>(`${environment.apiUrl}/users/search`, {
+      params: { q: query.trim() }
+    }).pipe(
+      catchError(() => of([]))
+    );
   }
 }

@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { ConversationService } from '../../services/conversation.service';
@@ -181,7 +181,8 @@ export class ChatComponent implements OnInit, OnDestroy {
     private conversationService: ConversationService,
     private userService: UserService,
     private wsService: WebSocketService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
@@ -189,6 +190,7 @@ export class ChatComponent implements OnInit, OnDestroy {
     this.loadConversations();
     this.loadUsers();
     this.setupWebSocket();
+    this.handleRouteParams();
   }
 
   ngOnDestroy(): void {
@@ -198,6 +200,68 @@ export class ChatComponent implements OnInit, OnDestroy {
       this.wsService.leaveConversation(this.selectedConversation.id);
     }
     this.wsService.disconnect();
+  }
+
+  private handleRouteParams(): void {
+    this.route.params.pipe(takeUntil(this.destroy$)).subscribe(params => {
+      const userId = params['userId'];
+      const conversationId = params['conversationId'];
+
+      if (userId) {
+        // Navigate to chat with a specific user - create or get conversation
+        this.openConversationWithUser(userId);
+      } else if (conversationId) {
+        // Navigate to a specific conversation
+        this.openConversationById(conversationId);
+      }
+    });
+  }
+
+  private openConversationWithUser(userId: string): void {
+    // createConversation now returns the full conversation with participants
+    this.conversationService.createConversation(userId).subscribe({
+      next: (conversation) => {
+        // Add to conversations list if not exists
+        const existingIndex = this.conversations.findIndex(c => c.id === conversation.id);
+        if (existingIndex === -1) {
+          this.conversations.unshift(conversation);
+        } else {
+          this.conversations[existingIndex] = conversation;
+        }
+        this.selectConversation(conversation);
+      },
+      error: (error) => {
+        console.error('Error creating/getting conversation:', error);
+      }
+    });
+  }
+
+  private openConversationById(conversationId: string): void {
+    this.conversationService.getConversation(conversationId).subscribe({
+      next: (conversation) => {
+        // Add to conversations list if not exists
+        const existingIndex = this.conversations.findIndex(c => c.id === conversation.id);
+        if (existingIndex === -1) {
+          this.conversations.unshift(conversation);
+        } else {
+          this.conversations[existingIndex] = conversation;
+        }
+        this.selectConversation(conversation);
+      },
+      error: (error) => {
+        console.error('Error loading conversation:', error);
+        // Redirect to base chat if conversation not found
+        this.router.navigate(['/chat']);
+      }
+    });
+  }
+
+  private selectConversation(conversation: Conversation): void {
+    if (this.selectedConversation) {
+      this.wsService.leaveConversation(this.selectedConversation.id);
+    }
+    this.selectedConversation = conversation;
+    this.wsService.joinConversation(conversation.id);
   }
 
   private setupWebSocket(): void {
@@ -258,11 +322,8 @@ export class ChatComponent implements OnInit, OnDestroy {
   }
 
   onConversationSelected(conversation: Conversation): void {
-    if (this.selectedConversation) {
-      this.wsService.leaveConversation(this.selectedConversation.id);
-    }
-    this.selectedConversation = conversation;
-    this.wsService.joinConversation(conversation.id);
+    // Navigate to the conversation URL
+    this.router.navigate(['/chat/conversation', conversation.id]);
   }
 
   onMessageSent(content: string): void {
@@ -280,23 +341,8 @@ export class ChatComponent implements OnInit, OnDestroy {
 
   startNewChat(user: User): void {
     this.showNewChatModal = false;
-    
-    this.conversationService.createConversation(user.id).subscribe({
-      next: (conversation) => {
-        // Add to conversations list if not exists
-        const exists = this.conversations.find(c => c.id === conversation.id);
-        if (!exists) {
-          // Enrich with participant info
-          conversation.participants = [this.currentUser!, user];
-          this.conversations.unshift(conversation);
-        }
-        // Select the conversation
-        this.onConversationSelected(conversation);
-      },
-      error: (error) => {
-        console.error('Error creating conversation:', error);
-      }
-    });
+    // Navigate to user chat URL which will create/get the conversation
+    this.router.navigate(['/chat/user', user.id]);
   }
 
   getUserInitial(): string {
