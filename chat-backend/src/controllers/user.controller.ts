@@ -200,17 +200,25 @@ export class UserController {
       return [];
     }
 
-    const searchTerm = query.trim().toLowerCase();
+    const searchTerm = query.trim();
+    // Escape special regex characters for safe use in regexp
+    const escapedTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regexPattern = new RegExp(escapedTerm, 'i');
     
-    // Find users matching the search term (username or email contains the term)
-    const allUsers = await this.userRepository.find({
-      where: {id: {neq: currentUserId}},
+    // Use database-level filtering with regexp for better scalability
+    const matchingUsers = await this.userRepository.find({
+      where: {
+        and: [
+          {id: {neq: currentUserId}},
+          {
+            or: [
+              {username: {regexp: regexPattern}},
+              {email: {regexp: regexPattern}},
+            ],
+          },
+        ],
+      },
     });
-
-    const matchingUsers = allUsers.filter(user => 
-      user.username.toLowerCase().includes(searchTerm) ||
-      user.email.toLowerCase().includes(searchTerm)
-    );
 
     return matchingUsers.map(user => {
       const {password, ...userWithoutPassword} = user;

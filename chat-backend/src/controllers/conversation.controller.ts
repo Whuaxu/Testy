@@ -32,8 +32,12 @@ export class ConversationController {
   @authenticate('jwt')
   @post('/conversations')
   @response(200, {
-    description: 'Conversation model instance',
-    content: {'application/json': {schema: getModelSchemaRef(Conversation)}},
+    description: 'Conversation model instance with participants',
+    content: {
+      'application/json': {
+        schema: getModelSchemaRef(Conversation, {includeRelations: true}),
+      },
+    },
   })
   async create(
     @inject(SecurityBindings.USER) currentUserProfile: UserProfile,
@@ -52,7 +56,7 @@ export class ConversationController {
       },
     })
     data: {participantId: string; name?: string},
-  ): Promise<Conversation> {
+  ): Promise<object> {
     const currentUserId = currentUserProfile[securityId];
     const participantIds = [currentUserId, data.participantId];
 
@@ -64,7 +68,24 @@ export class ConversationController {
       conversation.name = data.name;
     }
 
-    return conversation;
+    // Return enriched conversation with participant details
+    const participants = await Promise.all(
+      conversation.participantIds.map(async id => {
+        const user = await this.userRepository.findById(id);
+        const {password, ...userWithoutPassword} = user;
+        return userWithoutPassword;
+      }),
+    );
+
+    return {
+      id: conversation.id,
+      participantIds: conversation.participantIds,
+      name: conversation.name,
+      createdAt: conversation.createdAt,
+      updatedAt: conversation.updatedAt,
+      lastMessageId: conversation.lastMessageId,
+      participants,
+    };
   }
 
   @authenticate('jwt')

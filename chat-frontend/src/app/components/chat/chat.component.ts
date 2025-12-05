@@ -218,24 +218,17 @@ export class ChatComponent implements OnInit, OnDestroy {
   }
 
   private openConversationWithUser(userId: string): void {
+    // createConversation now returns the full conversation with participants
     this.conversationService.createConversation(userId).subscribe({
       next: (conversation) => {
-        // Fetch the full conversation with participants
-        this.conversationService.getConversation(conversation.id).subscribe({
-          next: (fullConversation) => {
-            // Add to conversations list if not exists
-            const existingIndex = this.conversations.findIndex(c => c.id === fullConversation.id);
-            if (existingIndex === -1) {
-              this.conversations.unshift(fullConversation);
-            } else {
-              this.conversations[existingIndex] = fullConversation;
-            }
-            this.selectConversation(fullConversation);
-          },
-          error: (error) => {
-            console.error('Error loading conversation:', error);
-          }
-        });
+        // Add to conversations list if not exists
+        const existingIndex = this.conversations.findIndex(c => c.id === conversation.id);
+        if (existingIndex === -1) {
+          this.conversations.unshift(conversation);
+        } else {
+          this.conversations[existingIndex] = conversation;
+        }
+        this.selectConversation(conversation);
       },
       error: (error) => {
         console.error('Error creating/getting conversation:', error);
