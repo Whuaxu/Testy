@@ -53,7 +53,7 @@ export class CustomUserService implements UserService<User, Credentials> {
     }
 
     // Hash password
-    const hashedPassword = await hash(userData.password!, 10);
+    const hashedPassword = await hash(userData.password!, 12);
 
     // Create user
     const user = await this.userRepository.create({

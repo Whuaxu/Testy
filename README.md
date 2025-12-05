@@ -63,6 +63,9 @@ Aplicación de chat en tiempo real entre usuarios con intercambio de mensajes ce
 git clone <repository-url>
 cd <repository-name>
 
+# Configurar el secreto JWT (requerido)
+export JWT_SECRET="tu-secreto-seguro-aqui"
+
 # Construir e iniciar todos los servicios
 docker-compose up --build
 
@@ -81,6 +84,7 @@ docker-compose up --build
 cd chat-backend
 npm install
 npm run build
+export JWT_SECRET="tu-secreto-seguro-aqui"
 npm start
 ```
 
@@ -142,7 +146,7 @@ npm start
 | HOST | Host del servidor | 0.0.0.0 |
 | MONGODB_URL | URL de MongoDB | mongodb://localhost:27017/chatdb |
 | REDIS_URL | URL de Redis | redis://localhost:6379 |
-| JWT_SECRET | Secreto para JWT | (cambiar en producción) |
+| JWT_SECRET | Secreto para JWT | **Requerido** |
 | JWT_EXPIRES_IN | Expiración del token (segundos) | 86400 |
 | CORS_ORIGIN | Origen CORS permitido | * |
 

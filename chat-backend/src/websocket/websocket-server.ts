@@ -44,7 +44,11 @@ export class WebSocketServer {
           return next(new Error('Authentication error: Token required'));
         }
 
-        const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-key-change-in-production';
+        const jwtSecret = process.env.JWT_SECRET;
+        if (!jwtSecret) {
+          console.error('JWT_SECRET environment variable is not set');
+          return next(new Error('Authentication error: Server configuration error'));
+        }
         const decoded = verify(token as string, jwtSecret) as DecodedToken;
         
         socket.data.userId = decoded.id;

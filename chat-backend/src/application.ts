@@ -42,8 +42,12 @@ export class ChatBackendApplication extends BootMixin(
     registerAuthenticationStrategy(this, JWTAuthenticationStrategy);
 
     // Bind JWT configuration
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      console.warn('WARNING: JWT_SECRET environment variable is not set. Using default value for development only.');
+    }
     this.bind('authentication.jwt.secret').to(
-      process.env.JWT_SECRET || 'your-super-secret-key-change-in-production',
+      jwtSecret || 'dev-only-secret-change-in-production',
     );
     this.bind('authentication.jwt.expiresIn').to(
       process.env.JWT_EXPIRES_IN || '86400', // 24 hours in seconds
