@@ -178,6 +178,47 @@ export class UserController {
   }
 
   @authenticate('jwt')
+  @get('/users/search')
+  @response(200, {
+    description: 'Search users by username or email',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'array',
+          items: getModelSchemaRef(User, {exclude: ['password']}),
+        },
+      },
+    },
+  })
+  async search(
+    @inject(SecurityBindings.USER) currentUserProfile: UserProfile,
+    @param.query.string('q') query: string,
+  ): Promise<Omit<User, 'password'>[]> {
+    const currentUserId = currentUserProfile[securityId];
+    
+    if (!query || query.trim().length === 0) {
+      return [];
+    }
+
+    const searchTerm = query.trim().toLowerCase();
+    
+    // Find users matching the search term (username or email contains the term)
+    const allUsers = await this.userRepository.find({
+      where: {id: {neq: currentUserId}},
+    });
+
+    const matchingUsers = allUsers.filter(user => 
+      user.username.toLowerCase().includes(searchTerm) ||
+      user.email.toLowerCase().includes(searchTerm)
+    );
+
+    return matchingUsers.map(user => {
+      const {password, ...userWithoutPassword} = user;
+      return userWithoutPassword as Omit<User, 'password'>;
+    });
+  }
+
+  @authenticate('jwt')
   @get('/users/{id}')
   @response(200, {
     description: 'User model instance',
