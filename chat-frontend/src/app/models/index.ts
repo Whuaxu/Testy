@@ -1,9 +1,8 @@
 export interface User {
   id: string;
+  firstName: string;
   email: string;
   username: string;
-  createdAt?: Date;
-  updatedAt?: Date;
 }
 
 export interface Message {
